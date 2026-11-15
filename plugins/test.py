@@ -46,7 +46,7 @@ class CLIENT:
      self.api_hash = Config.API_HASH
 
   def user_session(self, data):
-      return Client("USERBOT", self.api_id, self.api_hash, session_string=data)
+      return Client("USERBOT", self.api_id, self.api_hash, session_string=data, in_memory=True)
      
   async def add_bot(self, bot, message):
      user_id = int(message.from_user.id)
@@ -63,11 +63,12 @@ class CLIENT:
        return await msg.reply_text("<b>There is no bot token in that message</b>")
      try:
        _client = Client("BOT", Config.API_ID, Config.API_HASH, bot_token=bot_token, in_memory=True)
-       client = await _client.start()
+       await _client.start()
+       _bot = _client.me
+       await _client.stop()
      except Exception as e:
        await msg.reply_text(f"<b>BOT ERROR:</b> `{e}`")
        return
-     _bot = _client.me
      details = {
        'id': _bot.id,
        'is_bot': True,
@@ -87,46 +88,49 @@ class CLIENT:
      if phone_number_msg.text=='/cancel':
         return await phone_number_msg.reply('<b>process cancelled !</b>')
      phone_number = phone_number_msg.text
-     client = Client(":memory:", Config.API_ID, Config.API_HASH)
+     client = Client(f"userbot_login_{user_id}", Config.API_ID, Config.API_HASH, in_memory=True)
      await client.connect()
-     await phone_number_msg.reply("Sending OTP...")
      try:
-        code = await client.send_code(phone_number)
-        phone_code_msg = await bot.ask(user_id, "Please check for an OTP in official telegram account. If you got it, send OTP here after reading the below format. \n\nIf OTP is `12345`, **please send it as** `1 2 3 4 5`.\n\n**Enter /cancel to cancel The Procces**", filters=filters.text, timeout=600)
-     except PhoneNumberInvalid:
-        await phone_number_msg.reply('`PHONE_NUMBER` **is invalid.**')
-        return
-     if phone_code_msg.text=='/cancel':
-        return await phone_code_msg.reply('<b>process cancelled !</b>')
-     try:
-        phone_code = phone_code_msg.text.replace(" ", "")
-        await client.sign_in(phone_number, code.phone_code_hash, phone_code)
-     except PhoneCodeInvalid:
-        await phone_code_msg.reply('**OTP is invalid.**')
-        return
-     except PhoneCodeExpired:
-        await phone_code_msg.reply('**OTP is expired.**')
-        return
-     except SessionPasswordNeeded:
-        two_step_msg = await bot.ask(user_id, '**Your account has enabled two-step verification. Please provide the password.\n\nEnter /cancel to cancel The Procces**', filters=filters.text, timeout=300)
-        if two_step_msg.text=='/cancel':
-            return await two_step_msg.reply('<b>process cancelled !</b>')
+        await phone_number_msg.reply("Sending OTP...")
         try:
-           password = two_step_msg.text
-           await client.check_password(password=password)
-        except PasswordHashInvalid:
-           await two_step_msg.reply('**Invalid Password Provided**')
+           code = await client.send_code(phone_number)
+           phone_code_msg = await bot.ask(user_id, "Please check for an OTP in official telegram account. If you got it, send OTP here after reading the below format. \n\nIf OTP is `12345`, **please send it as** `1 2 3 4 5`.\n\n**Enter /cancel to cancel The Procces**", filters=filters.text, timeout=600)
+        except PhoneNumberInvalid:
+           await phone_number_msg.reply('`PHONE_NUMBER` **is invalid.**')
            return
-     string_session = await client.export_session_string()
-     await client.disconnect()
+        if phone_code_msg.text=='/cancel':
+           return await phone_code_msg.reply('<b>process cancelled !</b>')
+        try:
+           phone_code = phone_code_msg.text.replace(" ", "")
+           await client.sign_in(phone_number, code.phone_code_hash, phone_code)
+        except PhoneCodeInvalid:
+           await phone_code_msg.reply('**OTP is invalid.**')
+           return
+        except PhoneCodeExpired:
+           await phone_code_msg.reply('**OTP is expired.**')
+           return
+        except SessionPasswordNeeded:
+           two_step_msg = await bot.ask(user_id, '**Your account has enabled two-step verification. Please provide the password.\n\nEnter /cancel to cancel The Procces**', filters=filters.text, timeout=300)
+           if two_step_msg.text=='/cancel':
+               return await two_step_msg.reply('<b>process cancelled !</b>')
+           try:
+              password = two_step_msg.text
+              await client.check_password(password=password)
+           except PasswordHashInvalid:
+              await two_step_msg.reply('**Invalid Password Provided**')
+              return
+        string_session = await client.export_session_string()
+     finally:
+        await client.disconnect()
      if len(string_session) < SESSION_STRING_SIZE:
-        return await msg.reply('<b>invalid session sring</b>')
+        return await phone_number_msg.reply('<b>invalid session string</b>')
      try:
-       _client = Client("USERBOT", self.api_id, self.api_hash, session_string=string_session)
-       client = await _client.start()
+       _client = Client("USERBOT", self.api_id, self.api_hash, session_string=string_session, in_memory=True)
+       await _client.start()
+       user = _client.me
+       await _client.stop()
      except Exception as e:
-       return await msg.reply_text(f"<b>USER BOT ERROR:</b> `{e}`")
-     user = _client.me
+       return await phone_number_msg.reply_text(f"<b>USER BOT ERROR:</b> `{e}`")
      details = {
        'id': user.id,
        'is_bot': False,
@@ -232,7 +236,7 @@ async def get_client(bot_token, is_bot=True):
   if is_bot:
     return Client("BOT", Config.API_ID, Config.API_HASH, bot_token=bot_token, in_memory=True)
   else:
-    return Client("USERBOT", Config.API_ID, Config.API_HASH, session_string=bot_token)
+    return Client("USERBOT", Config.API_ID, Config.API_HASH, session_string=bot_token, in_memory=True)
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
