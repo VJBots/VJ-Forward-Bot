@@ -2,12 +2,23 @@
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
 # Ask Doubt on telegram @KingVJ01
 
-import asyncio, logging
+import asyncio
+import logging
+
+# Ensure a single active event loop exists before Motor (database.py) and
+# Pyrofork initialize so both bind to the same loop on Python 3.11+.
+_loop = asyncio.new_event_loop()
+asyncio.set_event_loop(_loop)
+
 from config import Config
 from pyrogram import Client as VJ, idle
-from typing import Union, Optional, AsyncGenerator
-from logging.handlers import RotatingFileHandler
 from plugins.regix import restart_forwards
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
@@ -15,60 +26,36 @@ from plugins.regix import restart_forwards
 
 if __name__ == "__main__":
     VJBot = VJ(
-        "VJ-Forward-Bot",
+        Config.BOT_SESSION,
         bot_token=Config.BOT_TOKEN,
         api_id=Config.API_ID,
         api_hash=Config.API_HASH,
         sleep_threshold=120,
-        plugins=dict(root="plugins")
-    )  
-    async def iter_messages(
-        self,
-        chat_id: Union[int, str],
-        limit: int,
-        offset: int = 0,
-    ) -> Optional[AsyncGenerator["types.Message", None]]:
-        """Iterate through a chat sequentially.
-        This convenience method does the same as repeatedly calling :meth:`~pyrogram.Client.get_messages` in a loop, thus saving
-        you from the hassle of setting up boilerplate code. It is useful for getting the whole chat messages with a
-        single call.
-        Parameters:
-            chat_id (``int`` | ``str``):
-                Unique identifier (int) or username (str) of the target chat.
-                For your personal cloud (Saved Messages) you can simply use "me" or "self".
-                For a contact that exists in your Telegram address book you can use his phone number (str).
-                
-            limit (``int``):
-                Identifier of the last message to be returned.
-                
-            offset (``int``, *optional*):
-                Identifier of the first message to be returned.
-                Defaults to 0.
-        Returns:
-            ``Generator``: A generator yielding :obj:`~pyrogram.types.Message` objects.
-        Example:
-            .. code-block:: python
-                for message in app.iter_messages("pyrogram", 1, 15000):
-                    print(message.text)
-        """
-        current = offset
-        while True:
-            new_diff = min(200, limit - current)
-            if new_diff <= 0:
-                return
-            messages = await self.get_messages(chat_id, list(range(current, current+new_diff+1)))
-            for message in messages:
-                yield message
-                current += 1
-               
+        in_memory=True,
+        plugins=dict(root="plugins"),
+    )
+
+    async def _run_restart_forwards():
+        try:
+            await restart_forwards(VJBot)
+        except Exception:
+            logger.exception("Failed while restarting pending forwards")
+
     async def main():
         await VJBot.start()
-        bot_info  = await VJBot.get_me()
-        await restart_forwards(VJBot)
-        print("Bot Started.")
-        await idle()
+        try:
+            bot_info = await VJBot.get_me()
+            logger.info("Bot Started as @%s", bot_info.username)
+            print("Bot Started.", flush=True)
+            asyncio.create_task(_run_restart_forwards())
+            await idle()
+        finally:
+            await VJBot.stop()
 
-    asyncio.get_event_loop().run_until_complete(main())
+    try:
+        _loop.run_until_complete(main())
+    finally:
+        _loop.close()
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ

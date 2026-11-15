@@ -58,7 +58,8 @@ async def restart(client, message):
     msg = await message.reply_text(text="<i>Trying to restarting.....</i>")
     await asyncio.sleep(5)
     await msg.edit("<i>Server restarted successfully ✅</i>")
-    system("git pull -f && pip3 install --no-cache-dir -r requirements.txt")
+    if os.path.isdir(".git"):
+        system("git pull -f && pip3 install --no-cache-dir -r requirements.txt")
     execle(sys.executable, sys.executable, "main.py", environ)
 
 # Don't Remove Credit Tg - @VJ_Botz

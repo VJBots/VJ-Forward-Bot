@@ -36,11 +36,28 @@ broadcast - broadcast a message to all your users (owner only)
 
 ## Variables
 
+### Required
 * `API_ID` API Id from my.telegram.org
 * `API_HASH` API Hash from my.telegram.org
 * `BOT_TOKEN` Bot token from @BotFather
 * `BOT_OWNER` Telegram Account Id of Owner.
 * `DATABASE_URI` Database uri from [MongoDB](https://mongodb.com) Watch [Video Tutorial](https://youtu.be/DAHRmFdw99o)
+
+### Optional
+* `DATABASE_NAME` MongoDB database name (default: `vj-forward-bot`)
+* `BOT_SESSION` Pyrogram session name (default: `vjbot`)
+* `PORT` HTTP health-check port injected by Koyeb (default: `8000`)
+
+## Deploy on Koyeb
+
+This repository supports both **Dockerfile** and **Buildpack** deployments on Koyeb out of the box:
+
+1. Create a new **Web Service** on [Koyeb](https://app.koyeb.com) and connect your GitHub repository.
+2. **Builder**: Choose either **Dockerfile** (recommended) or **Buildpack** (uses `.python-version`, `requirements.txt`, and `Procfile`).
+3. **Run Command**: Leave as default (`bash start.sh` is already configured in both `Dockerfile` and `Procfile`).
+4. **Environment Variables**: Add `API_ID`, `API_HASH`, `BOT_TOKEN`, `BOT_OWNER`, and `DATABASE_URI`.
+5. **Exposed Ports & Health Check**: Expose port `8000` (`HTTP`) with health check path `/` or `/health`.
+6. Click **Deploy**.
 
 ## Credits
 

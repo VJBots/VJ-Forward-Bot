@@ -28,6 +28,15 @@ CLIENT = CLIENT()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 TEXT = Script.TEXT
+PROGRESS = """
+📈 Percentage: {0} %
+♻️ Fetched: {1}
+🔥 Forwarded: {2}
+Remaining: {3}
+📊 Status: {4}
+⏳️ ETA: {5}
+⏰️ Uptime: {6}
+"""
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
@@ -226,7 +235,7 @@ async def forward(user, bot, msg, m, sts, protect):
      await edit(user, m, 'ᴘʀᴏɢʀᴇssɪɴɢ', e.value, sts)
      await asyncio.sleep(e.value)
      await edit(user, m, 'ᴘʀᴏɢʀᴇssɪɴɢ', 5, sts)
-     await forward(bot, msg, m, sts, protect)
+     await forward(user, bot, msg, m, sts, protect)
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
@@ -249,7 +258,8 @@ async def msg_edit(msg, text, button=None, wait=None):
 async def edit(user, msg, title, status, sts):
    i = sts.get(full=True)
    status = 'Forwarding' if status == 5 else f"sleeping {status} s" if str(status).isnumeric() else status
-   percentage = "{:.0f}".format(float(i.fetched)*100/float(i.total))
+   total = float(i.total) if i.total else 1.0
+   percentage = "{:.0f}".format(float(i.fetched)*100/total)
    text = TEXT.format(i.fetched, i.total_files, i.duplicate, i.deleted, i.skip, i.filtered, status, percentage, title)
    await update_forward(user_id=user, last_id=None, start_time=i.start, limit=i.limit, chat_id=i.FROM, toid=i.TO, forward_id=None, msg_id=msg.id, fetched=i.fetched, deleted=i.deleted, total=i.total_files, duplicate=i.duplicate, skip=i.skip, filterd=i.filtered)
    now = time.time()
@@ -369,7 +379,7 @@ async def extension_filter(extensions, file_name):
 
 async def size_filter(max_size, min_size, file_size):
     file_size = file_size / 1024 / 1024
-    if max_size and min_size == 0:
+    if max_size == 0 and min_size == 0:
         return False
     if max_size == 0:
         return file_size < min_size
@@ -434,10 +444,9 @@ async def status_msg(bot, msg):
     _, status, est_time, percentage, frwd_id = msg.data.split("#")
     sts = STS(frwd_id)
     if not sts.verify():
-       fetched, forwarded, remaining = 0
-    else:
-       fetched, limit, forwarded = sts.get('fetched'), sts.get('limit'), sts.get('total_files')
-       remaining = limit - fetched 
+       return await msg.answer("This forwarding task is no longer active.", show_alert=True)
+    fetched, limit, forwarded = sts.get('fetched'), sts.get('limit'), sts.get('total_files')
+    remaining = limit - fetched 
     est_time = TimeFormatter(milliseconds=est_time)
     start_time = sts.get('start')
     uptime = await get_bot_uptime(start_time)
@@ -487,8 +496,8 @@ async def restart_pending_forwads(bot, user):
        forward_id = await store_vars(user)
        sts = STS(forward_id)
        if settings['chat_id'] is None:
-           return await db.rmve_frwd(user)
            temp.forwardings -= 1
+           return await db.rmve_frwd(user)
        if not sts.verify():
           temp.forwardings -=1
           return 
@@ -538,7 +547,7 @@ async def restart_pending_forwads(bot, user):
        try: 
           await client.get_messages(sts.get("FROM"), sts.get("limit"))
        except:
-          await msg_edit(m, f"**Source chat may be a private channel / group. Use userbot (user must be member over there) or  if Make Your [Bot](t.me/{_bot['username']}) an admin over there**", retry_btn(firwd_id), True)
+          await msg_edit(m, f"**Source chat may be a private channel / group. Use userbot (user must be member over there) or  if Make Your [Bot](t.me/{_bot['username']}) an admin over there**", retry_btn(forward_id), True)
           return await stop(client, user)
        try:
           k = await client.send_message(i.TO, "Testing")
